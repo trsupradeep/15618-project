@@ -1,15 +1,10 @@
 CXX=g++ -m64
-CXXFLAGS=-I./common -Iobjs/ -O3 -Wall
+CXXFLAGS=-I -Iobjs/ -O3 -Wall
 OMP=-fopenmp -DOMP
 
 APP_NAME=mandelbrot
 OBJDIR=objs
-COMMONDIR=./common
 LDFLAGS= -lm
-
-PPM_CXX=$(COMMONDIR)/ppm.cpp
-PPM_OBJ=$(addprefix $(OBJDIR)/, $(subst $(COMMONDIR)/,, $(PPM_CXX:.cpp=.o)))
-
 
 all: mandel
 
@@ -22,19 +17,17 @@ clean:
 		/bin/rm -rf $(OBJDIR) *.ppm *~ $(APP_NAME)
 
 
-OBJS=$(OBJDIR)/main.o $(OBJDIR)/mandelbrot.o $(PPM_OBJ)
+OBJS=$(OBJDIR)/main.o
 
 $(OBJDIR)/%.o: %.cpp
 		$(CXX) $< $(CXXFLAGS) -c -o $@
 
-$(OBJDIR)/%.o: $(COMMONDIR)/%.cpp
-	$(CXX) $< $(CXXFLAGS) -c -o $@
 
-$(OBJDIR)/main.o: $(COMMONDIR)/CycleTimer.h
+$(OBJDIR)/main.o: CycleTimer.h
  
 
 mandel:dirs $(OBJS) 
-		$(CXX) $(OMP) $(CXXFLAGS) -o $@ $(OBJS)  $(LDFLAGS) 		
+		$(CXX) $(OMP) $(CXXFLAGS) -o $@ $(OBJS) $(LDFLAGS) 		
 
 
                                                                                                       

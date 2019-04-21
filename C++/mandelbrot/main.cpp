@@ -26,7 +26,6 @@ static inline int mandel(float c_re, float c_im, int count) {
     z_re = c_re + new_re;
     z_im = c_im + new_im;
   }
-
   return i;
 }
 
@@ -104,22 +103,40 @@ void mandelbrot_pixel_parallel(int numThreads, float x0, float y0, float x1,
                                int maxIterations, int output[]) {
   float dx = (x1 - x0) / width;
   float dy = (y1 - y0) / height;
-  omp_set_dynamic(0);
-  omp_set_num_threads(numThreads);
+
   int i, j;
-#pragma omp parallel for private(i) schedule(dynamic) num_threads(4)
-  for (j = 0; j < height; j++) {
-    for (i = 0; i < width; ++i) {
-      float x = x0 + i * dx;
-      float y = y0 + j * dy;
-      int index = (j * width + i);
-      printf("%d\n", omp_get_thread_num());
-      output[index] = mandel(x, y, maxIterations);
+  omp_set_num_threads(numThreads);
+#pragma omp parallel
+  {
+    //printf("%d\n", omp_get_thread_num());
+#pragma omp parallel for private(i) schedule(dynamic)
+    for (j = 0; j < height; j++) {
+      for (i = 0; i < width; ++i) {
+        float x = x0 + i * dx;
+        float y = y0 + j * dy;
+        int index = (j * width + i);
+        printf("%d\n", omp_get_thread_num());
+        int k;
+        #pragma omp critical
+        float c_x = x;
+        float c_y = y;
+        for (k = 0; k < maxIterations; ++k) {
+          if (x * x + y * y > 4.f)
+            break;
+
+          float new_re = x * x - y * y;
+          float new_im = 2.f * x * y;
+          x = c_x + new_re;
+          y = c_y + new_im;
+        }
+        output[index] = k;
+      }
     }
   }
 }
 
-do_runs(float x0, float x1, float y0, float y1, int weight, int height, int maxIterations, int numThreads, int code_config)) {
+void do_runs(float x0, float x1, float y0, float y1, int width, int height,
+             int maxIterations, int numThreads, int code_config) {
   int *output_serial = new int[width * height];
   int *output_parallel = new int[width * height];
   memset(output_serial, 0, width * height * sizeof(int));
@@ -127,8 +144,8 @@ do_runs(float x0, float x1, float y0, float y1, int weight, int height, int maxI
   memset(output_parallel, 0, width * height * sizeof(int));
   double minThread = 1e30;
   // Runs serial
-  if ((code_config % 2) == 0) {
-    for (int i = 0; i < numRuns; ++i) {
+  if ((code_config == 0) || (code_config == 1)) {
+    for (int i = 0; i < NUM_RUNS; ++i) {
       double startTime = CycleTimer::currentSeconds();
       mandelbrotSerial(x0, y0, x1, y1, width, height, maxIterations,
                        output_serial);
@@ -138,11 +155,11 @@ do_runs(float x0, float x1, float y0, float y1, int weight, int height, int maxI
     printf("[mandelbrot serial]:\t\t[%.3f] ms\n", minSerial * 1000);
   }
   // Runs parallel versions
-  if ((code_config == 1) || (code_config == 0)) {
+  if ((code_config % 2) == 0) {
     for (int i = 0; i < NUM_RUNS; ++i) {
       double startTime = CycleTimer::currentSeconds();
-      mandelbrot_pixel_parallel(numThreads, x0, y0, x1, y1, width, iheight, 0,
-                                iheight, maxIterations, output_thread);
+      mandelbrot_pixel_parallel(numThreads, x0, y0, x1, y1, width, height,
+                                maxIterations, output_parallel);
       double endTime = CycleTimer::currentSeconds();
       minThread = std::min(minThread, endTime - startTime);
     }
@@ -151,8 +168,6 @@ do_runs(float x0, float x1, float y0, float y1, int weight, int height, int maxI
       printf("ERROR : Output from threads does not match serial output\n");
       delete[] output_serial;
       delete[] output_parallel;
-
-      return 1;
     }
     // compute speedup
     printf("++++\t\t\t\t(%.2fx speedup from %d threads)\n",
@@ -184,16 +199,12 @@ int main(int argc, char **argv) {
   // parse commandline options ////////////////////////////////////////////
   int opt;
   static struct option long_options[] = {
-      {"threads", 1, 0, 't'},
-      {"view", 1, 0, 'v'},
-      {"field", 1, 0, 'f'},
-      {"code_config", 1, 0, 'c'} {"help", 0, 0, '?'},
-      {0, 0, 0, 0}};
+      {"threads", 1, 0, 't'},     {"view", 1, 0, 'v'}, {"field", 1, 0, 'f'},
+      {"code_config", 1, 0, 'c'}, {"help", 0, 0, '?'}, {0, 0, 0, 0}};
 
   int viewIndex = 1;
   int code_config = 0;
-  char fname[256];
-  while ((opt = getopt_long(argc, argv, "t:v:f:?", long_options, NULL)) !=
+  while ((opt = getopt_long(argc, argv, "t:v:f:c:?", long_options, NULL)) !=
          EOF) {
 
     switch (opt) {
@@ -237,7 +248,7 @@ int main(int argc, char **argv) {
   float shiftY = shiftYs[viewIndex];
   scaleAndShift(x0, x1, y0, y1, scaleValue, shiftX, shiftY);
 
-  do_runs(x0, x1, y0, y1, weight, height, maxIterations, numThreads,
+  do_runs(x0, x1, y0, y1, width, height, maxIterations, numThreads,
           code_config);
   return 0;
 }
