@@ -92,13 +92,29 @@ void mandelbrotSerial(float x0, float y0, float x1, float y1, int width,
   }
 }
 
-// Parallel over rows of the image
-// void mandelbrot_row_parallel(int numThreads, float x0, float y0, float x1,
-//                              float y1, int width, int height, int
-//                              maxIterations, int output[]) {}
-
-// Parallel over each pixel of the image
+//Parallel over pixels of the image
 void mandelbrot_pixel_parallel(int numThreads, float x0, float y0, float x1,
+                             float y1, int width, int height, int
+                             maxIterations, int output[]) {
+  float dx = (x1 - x0) / width;
+  float dy = (y1 - y0) / height;
+
+  int i, j;
+  omp_set_num_threads(numThreads);
+    for (j = 0; j < height; j++) {
+      #pragma omp parallel for private(i) schedule(static)
+      for (i = 0; i < width; ++i) {
+        float x = x0 + i * dx;
+        float y = y0 + j * dy;
+        int index = (j * width + i);
+        //printf("index = %d, thread = %d\n",index, omp_get_thread_num());
+        output[index] = mandel(x, y, maxIterations);
+      }
+  }
+  }
+
+// Parallel over each row of the image
+void mandelbrot_row_parallel(int numThreads, float x0, float y0, float x1,
                                float y1, int width, int height,
                                int maxIterations, int output[]) {
   float dx = (x1 - x0) / width;
@@ -106,32 +122,15 @@ void mandelbrot_pixel_parallel(int numThreads, float x0, float y0, float x1,
 
   int i, j;
   omp_set_num_threads(numThreads);
-#pragma omp parallel
-  {
-    //printf("%d\n", omp_get_thread_num());
-#pragma omp parallel for private(i) schedule(dynamic)
+#pragma omp parallel for private(i) schedule(static)
     for (j = 0; j < height; j++) {
       for (i = 0; i < width; ++i) {
         float x = x0 + i * dx;
         float y = y0 + j * dy;
         int index = (j * width + i);
-        printf("%d\n", omp_get_thread_num());
-        int k;
-        #pragma omp critical
-        float c_x = x;
-        float c_y = y;
-        for (k = 0; k < maxIterations; ++k) {
-          if (x * x + y * y > 4.f)
-            break;
-
-          float new_re = x * x - y * y;
-          float new_im = 2.f * x * y;
-          x = c_x + new_re;
-          y = c_y + new_im;
-        }
-        output[index] = k;
+        //printf("index = %d, thread = %d\n",index, omp_get_thread_num());
+        output[index] = mandel(x, y, maxIterations);
       }
-    }
   }
 }
 
@@ -139,9 +138,11 @@ void do_runs(float x0, float x1, float y0, float y1, int width, int height,
              int maxIterations, int numThreads, int code_config) {
   int *output_serial = new int[width * height];
   int *output_parallel = new int[width * height];
+  int *output_parallel_row = new int[width * height];
   memset(output_serial, 0, width * height * sizeof(int));
   double minSerial = 1e30;
   memset(output_parallel, 0, width * height * sizeof(int));
+  memset(output_parallel_row, 0, width * height * sizeof(int));
   double minThread = 1e30;
   // Runs serial
   if ((code_config == 0) || (code_config == 1)) {
@@ -156,6 +157,8 @@ void do_runs(float x0, float x1, float y0, float y1, int width, int height,
   }
   // Runs parallel versions
   if ((code_config % 2) == 0) {
+
+    printf("Running Parallel over pixels\n");
     for (int i = 0; i < NUM_RUNS; ++i) {
       double startTime = CycleTimer::currentSeconds();
       mandelbrot_pixel_parallel(numThreads, x0, y0, x1, y1, width, height,
@@ -163,19 +166,38 @@ void do_runs(float x0, float x1, float y0, float y1, int width, int height,
       double endTime = CycleTimer::currentSeconds();
       minThread = std::min(minThread, endTime - startTime);
     }
-    printf("[mandelbrot thread]:\t\t[%.3f] ms\n", minThread * 1000);
+    printf("[mandelbrot thread - over pixels]:\t\t[%.3f] ms\n", minThread * 1000);
     if (!verifyResult(output_serial, output_parallel, width, height)) {
       printf("ERROR : Output from threads does not match serial output\n");
       delete[] output_serial;
       delete[] output_parallel;
     }
     // compute speedup
-    printf("++++\t\t\t\t(%.2fx speedup from %d threads)\n",
+    printf("++++\t\t\t\t(%.2fx speedup from %d threads parallel over pixels)\n",
            minSerial / minThread, numThreads);
+
+    printf("Running Parallel over rows\n");
+    for (int i = 0; i < NUM_RUNS; ++i) {
+      double startTime = CycleTimer::currentSeconds();
+      mandelbrot_row_parallel(numThreads, x0, y0, x1, y1, width, height,
+                                maxIterations, output_parallel_row);
+      double endTime = CycleTimer::currentSeconds();
+      minThread = std::min(minThread, endTime - startTime);
+    }
+    printf("[mandelbrot thread - over rows]:\t\t[%.3f] ms\n", minThread * 1000);
+    if (!verifyResult(output_serial, output_parallel_row, width, height)) {
+      printf("ERROR : Output from threads does not match serial output\n");
+      delete[] output_serial;
+      delete[] output_parallel_row;
+    }
+    // compute speedup
+    printf("++++\t\t\t\t(%.2fx speedup from %d threads parallel over rows)\n",
+           minSerial / minThread, numThreads);       
   }
 
   delete[] output_serial;
   delete[] output_parallel;
+  delete[] output_parallel_row;
 }
 
 int main(int argc, char **argv) {

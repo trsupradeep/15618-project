@@ -1,6 +1,5 @@
 CXX=g++ -m64
-CXXFLAGS=-I -Iobjs/ -O3 -Wall
-OMP=-fopenmp -DOMP
+CXXFLAGS=-I -Iobjs/ -O3 -Wall -fopenmp
 
 APP_NAME=mandelbrot
 OBJDIR=objs
@@ -27,7 +26,7 @@ $(OBJDIR)/main.o: CycleTimer.h
  
 
 mandel:dirs $(OBJS) 
-		$(CXX) $(OMP) $(CXXFLAGS) -o $@ $(OBJS) $(LDFLAGS) 		
+		$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LDFLAGS) 		
 
 
                                                                                                       
