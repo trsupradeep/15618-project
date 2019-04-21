@@ -6,11 +6,11 @@
 #include "CycleTimer.h"
 
 #define VIEWCNT 7
-#define IMAGE_HEIGHT 2048
-#define IMAGE_WIDTH 2048
-#define NUM_ITER 256
+#define IMAGE_HEIGHT 4096
+#define IMAGE_WIDTH 4096
+#define NUM_ITER 2048
 #define NUM_THREADS 2
-#define NUM_RUNS 1
+#define NUM_RUNS 3
 
 // Core computation of Mandelbrot set membershop
 // Iterate complex number c to determine whether it diverges
@@ -62,7 +62,6 @@ bool verifyResult(int *gold, int *result, int width, int height) {
 
   return ok;
 }
-
 // Function to shift and scale complex imputs
 void scaleAndShift(float &x0, float &x1, float &y0, float &y1, float scale,
                    float shiftX, float shiftY) {
@@ -122,7 +121,7 @@ void mandelbrot_row_parallel(int numThreads, float x0, float y0, float x1,
 
   int i, j;
   omp_set_num_threads(numThreads);
-#pragma omp parallel for private(i) schedule(static)
+#pragma omp parallel for private(i) schedule(dynamic)
     for (j = 0; j < height; j++) {
       for (i = 0; i < width; ++i) {
         float x = x0 + i * dx;
@@ -173,7 +172,7 @@ void do_runs(float x0, float x1, float y0, float y1, int width, int height,
       delete[] output_parallel;
     }
     // compute speedup
-    printf("++++\t\t\t\t(%.2fx speedup from %d threads parallel over pixels)\n",
+    printf("++++\t\t\t\t(%.2fx speedup from %d threads)\n",
            minSerial / minThread, numThreads);
 
     printf("Running Parallel over rows\n");
@@ -191,7 +190,7 @@ void do_runs(float x0, float x1, float y0, float y1, int width, int height,
       delete[] output_parallel_row;
     }
     // compute speedup
-    printf("++++\t\t\t\t(%.2fx speedup from %d threads parallel over rows)\n",
+    printf("++++\t\t\t\t(%.2fx speedup from %d threads)\n",
            minSerial / minThread, numThreads);       
   }
 
@@ -209,8 +208,8 @@ int main(int argc, char **argv) {
 
   float x0 = -2.167;
   float x1 = 1.167;
-  float y0 = -1;
-  float y1 = 1;
+  float y0 = -1.5;
+  float y1 = 1.5;
 
   // Support VIEWCNT views
   float scaleValues[VIEWCNT] = {0.01f, 1.0f,  0.015f, 0.02f,
