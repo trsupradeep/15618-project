@@ -22,9 +22,6 @@ fn main() {
         .unwrap();
 
     do_runs(&mandel_config, &mut image);
-
-    // let equal = image.as_slice() == image_2.as_slice();
-    // println!("Are they equal? {:?}", equal);
 }
 
 // Configuration file, reflects command line options
@@ -308,7 +305,7 @@ pub fn mandelbrot_serial(mandel_config: &MandelConfig, image: &mut [u32]) {
 
             let index = ((y * mandel_config.img_size) + x) as usize;
 
-            image[index] = mandel_iter2(mandel_config.max_iter, xf, yf);
+            image[index] = mandel_iter(mandel_config.max_iter, xf, yf);
         }
     }
 }
@@ -322,7 +319,7 @@ pub fn rayon_mandelbrot_pixel(mandel_config: &MandelConfig, image: &mut [u32]) {
         let xf = mandel_config.re1 + x as f32 * mandel_config.x_step;
         let yf = mandel_config.img1 + y as f32 * mandel_config.y_step;
 
-        *pixel = mandel_iter2(mandel_config.max_iter, xf, yf);
+        *pixel = mandel_iter(mandel_config.max_iter, xf, yf);
     });
 }
 
@@ -336,7 +333,7 @@ pub fn rayon_mandelbrot_row(mandel_config: &MandelConfig, image: &mut [u32]) {
                 let xf = mandel_config.re1 + x as f32 * mandel_config.x_step;
                 let yf = mandel_config.img1 + y as f32 * mandel_config.y_step;
 
-                slice[x as usize] = mandel_iter2(mandel_config.max_iter, xf, yf);
+                slice[x as usize] = mandel_iter(mandel_config.max_iter, xf, yf);
             }
         });
 }
@@ -352,7 +349,7 @@ pub fn crossbeam_manderlbrot_row(mandel_config: &MandelConfig, image: &mut [u32]
                     let xf = mandel_config.re1 + x as f32 * mandel_config.x_step;
                     let yf = mandel_config.img1 + y as f32 * mandel_config.y_step;
 
-                    slice[x as usize] = mandel_iter2(mandel_config.max_iter, xf, yf);
+                    slice[x as usize] = mandel_iter(mandel_config.max_iter, xf, yf);
                 }
             });
         }
@@ -362,7 +359,7 @@ pub fn crossbeam_manderlbrot_row(mandel_config: &MandelConfig, image: &mut [u32]
 
 // The inner iteration loop of the mandelbrot calculation
 // See https://en.wikipedia.org/wiki/Mandelbrot_set
-pub fn mandel_iter2(max_iter: u32, c_re: f32, c_im: f32) -> u32 {
+pub fn mandel_iter(max_iter: u32, c_re: f32, c_im: f32) -> u32 {
     let mut z_re = c_re;
     let mut z_im = c_im;
 
