@@ -5,9 +5,9 @@ extern crate num_cpus;
 extern crate rayon;
 
 use clap::{App, Arg};
-use num::complex::Complex32;
 use rayon::prelude::*;
-use std::time::Instant;
+use std::time::{Instant, Duration};
+
 
 fn main() {
     let mandel_config = parse_arguments();
@@ -45,57 +45,91 @@ pub struct MandelConfig {
 
 pub fn do_runs(mandel_config: &MandelConfig, image: &mut [u32]) {
     let num_runs = mandel_config.num_of_runs;
+    assert!(num_runs > 0);
 
-    if (mandel_config.code_config % 2) == 0 {
-        let serial_start = Instant::now();
-        for r in 0..num_runs {
-            println!("Serial Code Run {}", r + 1);
+    let mut serial_time = Duration::new(100, 0);
+    let mut pixel_parallel_time = Duration::new(100, 0);
+    let mut row_parallel_time = Duration::new(100, 0);
+    let mut crossbeam_parallel_time = Duration::new(100, 0);
+
+    if (mandel_config.code_config == 0) || (mandel_config.code_config == 2) {
+        for _ in 0..num_runs {
+            let serial_start = Instant::now();
             mandelbrot_serial(&mandel_config, image);
+            let serial_end = Instant::now();
+
+            serial_time = std::cmp::min(serial_time, serial_end.duration_since(serial_start));
         }
-        let serial_end = Instant::now();
 
         println!(
-            "Serial Code Execution time: {:?}",
-            serial_end.duration_since(serial_start) / num_runs
+            "[mandelbrot-rust serial]: \t[{:?} ms]",
+            serial_time.as_millis()
         );
     }
 
     if (mandel_config.code_config == 0) || (mandel_config.code_config == 1) {
-        let rayon_pixel_start = Instant::now();
-        for r in 0..num_runs {
-            println!("Rayon Mandelbrot Pixel Code Run {}", r + 1);
+
+        for _ in 0..num_runs {
+            let rayon_pixel_start = Instant::now();
             rayon_mandelbrot_pixel(&mandel_config, image);
+            let rayon_pixel_end = Instant::now();
+
+            pixel_parallel_time = std::cmp::min(pixel_parallel_time, rayon_pixel_end.duration_since(rayon_pixel_start));
         }
-        let rayon_pixel_end = Instant::now();
 
         println!(
-            "Rayon Pixel Parallel Code Execution time: {:?}",
-            rayon_pixel_end.duration_since(rayon_pixel_start) / num_runs
+            "[mandelbrot-rust pixel]: \t[{:?} ms]",
+            pixel_parallel_time.as_millis()
         );
+        if mandel_config.code_config == 0 {
+            println!(
+                "++++ \t\t({:.2}x speedup from {:?} threads)\n",
+                serial_time.as_millis() as f64 / pixel_parallel_time.as_millis() as f64, mandel_config.num_threads
+            );
+        }
 
-        let rayon_row_start = Instant::now();
-        for r in 0..num_runs {
-            println!("Rayon Mandelbrot Row Code Run {}", r + 1);
+        //////////////////////
+        // Row parallel Test
+
+        for _ in 0..num_runs {
+            let rayon_row_start = Instant::now();
             rayon_mandelbrot_row(&mandel_config, image);
+            let rayon_row_end = Instant::now();
+
+            row_parallel_time = std::cmp::min(row_parallel_time, rayon_row_end.duration_since(rayon_row_start));
         }
-        let rayon_row_end = Instant::now();
 
         println!(
-            "Rayon Row Parallel Code Execution time: {:?}",
-            rayon_row_end.duration_since(rayon_row_start) / num_runs
+            "[mandelbrot-rust row]: \t[{:?} ms]",
+            row_parallel_time.as_millis()
         );
 
-        let crossbeam_row_start = Instant::now();
-        for r in 0..num_runs {
-            println!("Crossbeam Mandelbrot Row Code Run {}", r + 1);
+        if mandel_config.code_config == 0 {
+            println!(
+                "++++ \t\t({:.2}x speedup from {:?} threads) \n",
+                serial_time.as_millis() as f64/ row_parallel_time.as_millis() as f64, mandel_config.num_threads
+            );
+        }
+
+        for _ in 0..num_runs {
+            let crossbeam_row_start = Instant::now();
             crossbeam_manderlbrot_row(&mandel_config, image);
+            let crossbeam_row_end = Instant::now();
+
+            crossbeam_parallel_time = std::cmp::min(crossbeam_parallel_time, crossbeam_row_end.duration_since(crossbeam_row_start));
         }
-        let crossbeam_row_end = Instant::now();
 
         println!(
-            "Crossbeam Row Parallel Code Execution time: {:?}",
-            crossbeam_row_end.duration_since(crossbeam_row_start) / num_runs
+            "[mandelbrot-rust crossbeam row]: \t[{:?} ms]",
+            crossbeam_parallel_time.as_millis()
         );
+
+        if mandel_config.code_config == 0 {
+            println!(
+                "++++ \t\t({:.2}x speedup from {:?} threads)\n",
+                serial_time.as_millis() as f64/ crossbeam_parallel_time.as_millis() as f64, mandel_config.num_threads
+            );
+        }
     }
 }
 
@@ -109,13 +143,13 @@ pub fn parse_arguments() -> MandelConfig {
             Arg::with_name("REAL1")
                 .long("re0")
                 .value_name("REAL1")
-                .help("left real part (default: -2.0)"),
+                .help("left real part (default: -2.167)"),
         )
         .arg(
             Arg::with_name("REAL2")
                 .long("re1")
                 .value_name("REAL2")
-                .help("right real part (default: 1.0)"),
+                .help("right real part (default: 1.167)"),
         )
         .arg(
             Arg::with_name("IMAGINARY1")
@@ -176,13 +210,13 @@ pub fn parse_arguments() -> MandelConfig {
     let max_threads = num_cpus::get();
 
     // Match and store all values of the arguments
-    let re1 = value_t!(matches.value_of("REAL1"), f32).unwrap_or(-2.0);
-    let re2 = value_t!(matches.value_of("REAL2"), f32).unwrap_or(1.0);
+    let re1 = value_t!(matches.value_of("REAL1"), f32).unwrap_or(-2.167);
+    let re2 = value_t!(matches.value_of("REAL2"), f32).unwrap_or(1.167);
     let img1 = value_t!(matches.value_of("IMAGINARY1"), f32).unwrap_or(-1.5);
     let img2 = value_t!(matches.value_of("IMAGINARY2"), f32).unwrap_or(1.5);
     let max_iter = value_t!(matches.value_of("MAX_ITER"), u32).unwrap_or(2048);
     let img_size = value_t!(matches.value_of("IMAGE_SIZE"), u32).unwrap_or(4096);
-    let num_of_runs = value_t!(matches.value_of("NUM_OF_RUNS"), u32).unwrap_or(1);
+    let num_of_runs = value_t!(matches.value_of("NUM_OF_RUNS"), u32).unwrap_or(3);
     let num_threads =
         value_t!(matches.value_of("NUMBER_OF_THREADS"), u32).unwrap_or(max_threads as u32);
     let view = value_t!(matches.value_of("VIEW_NUM"), u32).unwrap_or(1);
@@ -196,13 +230,14 @@ pub fn parse_arguments() -> MandelConfig {
     assert!(num_threads > 0);
     assert!(view < 7);
     assert!(num_of_runs > 0);
+    assert!(code_config < 3);
 
     // Find new scaled values for view
     let (x0, x1, y0, y1) = scale_and_shift(re1, re2, img1, img2, view);
 
     //
-    println!("Configuration: \nre1: {:.2}, re2: {:.2}, img1: {:.2}, img2: {:.2}, max_iter: {}, img_size: {}, num_threads: {}, num_of_runs: {}, view: {}",
-        x0, x1, y0, y1, max_iter, img_size, num_threads, num_of_runs, view);
+    println!("Configuration: \nre1: {:.3}, re2: {:.3}, img1: {:.3}, img2: {:.3}, max_iter: {}, img_size: {}, num_threads: {}, num_of_runs: {}, view: {}, code_config: {} \n",
+        x0, x1, y0, y1, max_iter, img_size, num_threads, num_of_runs, view, code_config);
 
     // Calculate the step size
     let x_step = (x1 - x0) / (img_size as f32);
@@ -268,14 +303,12 @@ pub fn scale_and_shift(
 pub fn mandelbrot_serial(mandel_config: &MandelConfig, image: &mut [u32]) {
     for y in 0..mandel_config.img_size {
         for x in 0..mandel_config.img_size {
+            let xf = mandel_config.re1 + x as f32 * mandel_config.x_step;
+            let yf = mandel_config.img1 + y as f32 * mandel_config.y_step;
+
             let index = ((y * mandel_config.img_size) + x) as usize;
-            image[index] = mandel_iter(
-                mandel_config.max_iter,
-                Complex32 {
-                    re: mandel_config.re1 + ((x as f32) * mandel_config.x_step),
-                    im: mandel_config.img1 + ((y as f32) * mandel_config.y_step),
-                },
-            );
+
+            image[index] = mandel_iter2(mandel_config.max_iter, xf, yf);
         }
     }
 }
@@ -285,13 +318,11 @@ pub fn rayon_mandelbrot_pixel(mandel_config: &MandelConfig, image: &mut [u32]) {
     image.par_iter_mut().enumerate().for_each(|(n, pixel)| {
         let y = (n as u32) / mandel_config.img_size;
         let x = (n as u32) - (y * mandel_config.img_size);
-        *pixel = mandel_iter(
-            mandel_config.max_iter,
-            Complex32 {
-                re: mandel_config.re1 + ((x as f32) * mandel_config.x_step),
-                im: mandel_config.img1 + ((y as f32) * mandel_config.y_step),
-            },
-        );
+
+        let xf = mandel_config.re1 + x as f32 * mandel_config.x_step;
+        let yf = mandel_config.img1 + y as f32 * mandel_config.y_step;
+
+        *pixel = mandel_iter2(mandel_config.max_iter, xf, yf);
     });
 }
 
@@ -302,13 +333,10 @@ pub fn rayon_mandelbrot_row(mandel_config: &MandelConfig, image: &mut [u32]) {
         .enumerate()
         .for_each(|(y, slice)| {
             for x in 0..mandel_config.img_size {
-                slice[x as usize] = mandel_iter(
-                    mandel_config.max_iter,
-                    Complex32 {
-                        re: mandel_config.re1 + ((x as f32) * mandel_config.x_step),
-                        im: mandel_config.img1 + ((y as f32) * mandel_config.y_step),
-                    },
-                );
+                let xf = mandel_config.re1 + x as f32 * mandel_config.x_step;
+                let yf = mandel_config.img1 + y as f32 * mandel_config.y_step;
+
+                slice[x as usize] = mandel_iter2(mandel_config.max_iter, xf, yf);
             }
         });
 }
@@ -321,13 +349,10 @@ pub fn crossbeam_manderlbrot_row(mandel_config: &MandelConfig, image: &mut [u32]
         {
             scope.spawn(move |_| {
                 for x in 0..mandel_config.img_size {
-                    slice[x as usize] = mandel_iter(
-                        mandel_config.max_iter,
-                        Complex32 {
-                            re: mandel_config.re1 + ((x as f32) * mandel_config.x_step),
-                            im: mandel_config.img1 + ((y as f32) * mandel_config.y_step),
-                        },
-                    );
+                    let xf = mandel_config.re1 + x as f32 * mandel_config.x_step;
+                    let yf = mandel_config.img1 + y as f32 * mandel_config.y_step;
+
+                    slice[x as usize] = mandel_iter2(mandel_config.max_iter, xf, yf);
                 }
             });
         }
@@ -337,13 +362,18 @@ pub fn crossbeam_manderlbrot_row(mandel_config: &MandelConfig, image: &mut [u32]
 
 // The inner iteration loop of the mandelbrot calculation
 // See https://en.wikipedia.org/wiki/Mandelbrot_set
-pub fn mandel_iter(max_iter: u32, c: Complex32) -> u32 {
-    let mut z: Complex32 = c;
+pub fn mandel_iter2(max_iter: u32, c_re: f32, c_im: f32) -> u32 {
+    let mut z_re = c_re;
+    let mut z_im = c_im;
 
     let mut iter = 0;
 
-    while (z.norm_sqr() <= 4.0) && (iter < max_iter) {
-        z = c + (z * z);
+    while ((z_re * z_re + z_im * z_im) <= 4.0) && (iter < max_iter) {
+        let new_re = z_re * z_re - z_im * z_im;
+        let new_im = 2.0 * z_re * z_im;
+        
+        z_re = c_re + new_re;
+        z_im = c_im + new_im;
         iter = iter + 1;
     }
     iter
