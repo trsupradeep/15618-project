@@ -1,0 +1,12 @@
+[package]
+name = "matrixmultiply"
+version = "0.1.0"
+authors = ["Supradeep T R <tr.supradeep@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+rayon = "1.0.3"
+num = "0.2.0"
+clap = "2.33.0"
+num_cpus = "1.10.0"
+crossbeam = "0.7.1"
