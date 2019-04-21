@@ -6,8 +6,8 @@
 #include "CycleTimer.h"
 
 #define VIEWCNT 7
-#define IMAGE_HEIGHT 4096
-#define IMAGE_WIDTH 4096
+#define IMAGE_HEIGHT 8192
+#define IMAGE_WIDTH 8192
 #define NUM_ITER 2048
 #define NUM_THREADS 2
 #define NUM_RUNS 3
@@ -201,8 +201,8 @@ void do_runs(float x0, float x1, float y0, float y1, int width, int height,
 
 int main(int argc, char **argv) {
 
-  const int width = IMAGE_WIDTH;
-  const int height = IMAGE_HEIGHT;
+  int width = IMAGE_WIDTH;
+  int height = IMAGE_HEIGHT;
   const int maxIterations = NUM_ITER;
   int numThreads = NUM_THREADS;
 
@@ -220,12 +220,12 @@ int main(int argc, char **argv) {
   // parse commandline options ////////////////////////////////////////////
   int opt;
   static struct option long_options[] = {
-      {"threads", 1, 0, 't'},     {"view", 1, 0, 'v'}, {"field", 1, 0, 'f'},
+      {"threads", 1, 0, 't'},     {"view", 1, 0, 'v'}, {"field", 1, 0, 'f'}, {"size",1,0,'s'},
       {"code_config", 1, 0, 'c'}, {"help", 0, 0, '?'}, {0, 0, 0, 0}};
 
   int viewIndex = 1;
   int code_config = 0;
-  while ((opt = getopt_long(argc, argv, "t:v:f:c:?", long_options, NULL)) !=
+  while ((opt = getopt_long(argc, argv, "t:v:f:c:s:?", long_options, NULL)) !=
          EOF) {
 
     switch (opt) {
@@ -255,6 +255,12 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Invalid code configuration %d\n", code_config);
         return 1;
       }
+      break;
+    }
+    case 's': {
+      int size = atoi(optarg);
+      height = size;
+      width = size;
       break;
     }
     case '?':
