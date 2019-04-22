@@ -1,6 +1,7 @@
 # Profiles for the given case
 
 # Create Logging directory
+mkdir ./../data
 mkdir ./../data/mandelbrot
 
 save_path="./../data/mandelbrot/c++"
