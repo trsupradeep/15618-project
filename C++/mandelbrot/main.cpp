@@ -1,13 +1,13 @@
-#include <algorithm>
 #include <getopt.h>
 #include <omp.h>
 #include <stdio.h>
+#include <algorithm>
 
 #include "CycleTimer.h"
 
 #define VIEWCNT 7
-#define IMAGE_HEIGHT 8192
-#define IMAGE_WIDTH 8192
+#define IMAGE_HEIGHT 4096
+#define IMAGE_WIDTH 4096
 #define NUM_ITER 2048
 #define NUM_THREADS 2
 #define NUM_RUNS 3
@@ -18,8 +18,7 @@ static inline int mandel(float c_re, float c_im, int count) {
   float z_re = c_re, z_im = c_im;
   int i;
   for (i = 0; i < count; ++i) {
-    if (z_re * z_re + z_im * z_im > 4.f)
-      break;
+    if (z_re * z_re + z_im * z_im > 4.f) break;
 
     float new_re = z_re * z_re - z_im * z_im;
     float new_im = 2.f * z_re * z_im;
@@ -35,8 +34,9 @@ void usage(const char *progname) {
   printf("  -t  --threads <N>       Use N threads\n");
   printf("  -v  --view <INT>        Use specified view settings (0-6)\n");
   printf("  -f  --field x0:y0:x1:y1 Specify set boundaries\n");
-  printf("  -c  --code configuration Specify 0 for all, 1 for parallel only, 2 "
-         "for serial only\n");
+  printf(
+      "  -c  --code configuration Specify 0 for all, 1 for parallel only, 2 "
+      "for serial only\n");
   printf("  -?  --help              This message\n");
 }
 
@@ -91,29 +91,8 @@ void mandelbrotSerial(float x0, float y0, float x1, float y1, int width,
   }
 }
 
-//Parallel over pixels of the image
+// Parallel over pixels of the image
 void mandelbrot_pixel_parallel(int numThreads, float x0, float y0, float x1,
-                             float y1, int width, int height, int
-                             maxIterations, int output[]) {
-  float dx = (x1 - x0) / width;
-  float dy = (y1 - y0) / height;
-
-  int i, j;
-  omp_set_num_threads(numThreads);
-    for (j = 0; j < height; j++) {
-      #pragma omp parallel for private(i) schedule(static)
-      for (i = 0; i < width; ++i) {
-        float x = x0 + i * dx;
-        float y = y0 + j * dy;
-        int index = (j * width + i);
-        //printf("index = %d, thread = %d\n",index, omp_get_thread_num());
-        output[index] = mandel(x, y, maxIterations);
-      }
-  }
-  }
-
-// Parallel over each row of the image
-void mandelbrot_row_parallel(int numThreads, float x0, float y0, float x1,
                                float y1, int width, int height,
                                int maxIterations, int output[]) {
   float dx = (x1 - x0) / width;
@@ -121,15 +100,36 @@ void mandelbrot_row_parallel(int numThreads, float x0, float y0, float x1,
 
   int i, j;
   omp_set_num_threads(numThreads);
+  for (j = 0; j < height; j++) {
+#pragma omp parallel for private(i) schedule(static)
+    for (i = 0; i < width; ++i) {
+      float x = x0 + i * dx;
+      float y = y0 + j * dy;
+      int index = (j * width + i);
+      // printf("index = %d, thread = %d\n",index, omp_get_thread_num());
+      output[index] = mandel(x, y, maxIterations);
+    }
+  }
+}
+
+// Parallel over each row of the image
+void mandelbrot_row_parallel(int numThreads, float x0, float y0, float x1,
+                             float y1, int width, int height, int maxIterations,
+                             int output[]) {
+  float dx = (x1 - x0) / width;
+  float dy = (y1 - y0) / height;
+
+  int i, j;
+  omp_set_num_threads(numThreads);
 #pragma omp parallel for private(i) schedule(dynamic)
-    for (j = 0; j < height; j++) {
-      for (i = 0; i < width; ++i) {
-        float x = x0 + i * dx;
-        float y = y0 + j * dy;
-        int index = (j * width + i);
-        //printf("index = %d, thread = %d\n",index, omp_get_thread_num());
-        output[index] = mandel(x, y, maxIterations);
-      }
+  for (j = 0; j < height; j++) {
+    for (i = 0; i < width; ++i) {
+      float x = x0 + i * dx;
+      float y = y0 + j * dy;
+      int index = (j * width + i);
+      // printf("index = %d, thread = %d\n",index, omp_get_thread_num());
+      output[index] = mandel(x, y, maxIterations);
+    }
   }
 }
 
@@ -155,8 +155,7 @@ void do_runs(float x0, float x1, float y0, float y1, int width, int height,
     printf("[mandelbrot serial]:\t\t[%.3f] ms\n", minSerial * 1000);
   }
   // Runs parallel versions
-  if ((code_config % 2) == 0) {
-
+  if ((code_config == 0) || (code_config == 2)) {
     printf("Running Parallel over pixels\n");
     for (int i = 0; i < NUM_RUNS; ++i) {
       double startTime = CycleTimer::currentSeconds();
@@ -165,33 +164,30 @@ void do_runs(float x0, float x1, float y0, float y1, int width, int height,
       double endTime = CycleTimer::currentSeconds();
       minThread = std::min(minThread, endTime - startTime);
     }
-    printf("[mandelbrot thread - over pixels]:\t\t[%.3f] ms\n", minThread * 1000);
-    if (!verifyResult(output_serial, output_parallel, width, height)) {
-      printf("ERROR : Output from threads does not match serial output\n");
-      delete[] output_serial;
-      delete[] output_parallel;
+    printf("[mandelbrot thread - over pixels]:\t\t[%.3f] ms\n",
+           minThread * 1000);
+
+    if (code_config == 0) {
+      // compute speedup
+      printf("++++\t\t\t\t(%.2fx speedup from %d threads)\n",
+             minSerial / minThread, numThreads);
     }
-    // compute speedup
-    printf("++++\t\t\t\t(%.2fx speedup from %d threads)\n",
-           minSerial / minThread, numThreads);
 
     printf("Running Parallel over rows\n");
     for (int i = 0; i < NUM_RUNS; ++i) {
       double startTime = CycleTimer::currentSeconds();
       mandelbrot_row_parallel(numThreads, x0, y0, x1, y1, width, height,
-                                maxIterations, output_parallel_row);
+                              maxIterations, output_parallel_row);
       double endTime = CycleTimer::currentSeconds();
       minThread = std::min(minThread, endTime - startTime);
     }
     printf("[mandelbrot thread - over rows]:\t\t[%.3f] ms\n", minThread * 1000);
-    if (!verifyResult(output_serial, output_parallel_row, width, height)) {
-      printf("ERROR : Output from threads does not match serial output\n");
-      delete[] output_serial;
-      delete[] output_parallel_row;
+
+    if (code_config == 0) {
+      // compute speedup
+      printf("++++\t\t\t\t(%.2fx speedup from %d threads)\n",
+             minSerial / minThread, numThreads);
     }
-    // compute speedup
-    printf("++++\t\t\t\t(%.2fx speedup from %d threads)\n",
-           minSerial / minThread, numThreads);       
   }
 
   delete[] output_serial;
@@ -200,7 +196,6 @@ void do_runs(float x0, float x1, float y0, float y1, int width, int height,
 }
 
 int main(int argc, char **argv) {
-
   int width = IMAGE_WIDTH;
   int height = IMAGE_HEIGHT;
   const int maxIterations = NUM_ITER;
@@ -219,54 +214,57 @@ int main(int argc, char **argv) {
 
   // parse commandline options ////////////////////////////////////////////
   int opt;
-  static struct option long_options[] = {
-      {"threads", 1, 0, 't'},     {"view", 1, 0, 'v'}, {"field", 1, 0, 'f'}, {"size",1,0,'s'},
-      {"code_config", 1, 0, 'c'}, {"help", 0, 0, '?'}, {0, 0, 0, 0}};
+  static struct option long_options[] = {{"threads", 1, 0, 't'},
+                                         {"view", 1, 0, 'v'},
+                                         {"field", 1, 0, 'f'},
+                                         {"size", 1, 0, 's'},
+                                         {"code_config", 1, 0, 'c'},
+                                         {"help", 0, 0, '?'},
+                                         {0, 0, 0, 0}};
 
   int viewIndex = 1;
   int code_config = 0;
   while ((opt = getopt_long(argc, argv, "t:v:f:c:s:?", long_options, NULL)) !=
          EOF) {
-
     switch (opt) {
-    case 't': {
-      numThreads = atoi(optarg);
-      break;
-    }
-    case 'v': {
-      viewIndex = atoi(optarg);
-      // change view settings
-      if (viewIndex < 0 || viewIndex >= VIEWCNT) {
-        fprintf(stderr, "Invalid view index %d\n", viewIndex);
+      case 't': {
+        numThreads = atoi(optarg);
+        break;
+      }
+      case 'v': {
+        viewIndex = atoi(optarg);
+        // change view settings
+        if (viewIndex < 0 || viewIndex >= VIEWCNT) {
+          fprintf(stderr, "Invalid view index %d\n", viewIndex);
+          return 1;
+        }
+        break;
+      }
+      case 'f': {
+        if (sscanf(optarg, "%f:%f:%f:%f", &x0, &y0, &x1, &y1) != 4) {
+          fprintf(stderr, "Couldn't extract field from '%s'\n", optarg);
+          exit(1);
+        }
+        break;
+      }
+      case 'c': {
+        code_config = atoi(optarg);
+        if (code_config < 0 || code_config > 2) {
+          fprintf(stderr, "Invalid code configuration %d\n", code_config);
+          return 1;
+        }
+        break;
+      }
+      case 's': {
+        int size = atoi(optarg);
+        height = size;
+        width = size;
+        break;
+      }
+      case '?':
+      default:
+        usage(argv[0]);
         return 1;
-      }
-      break;
-    }
-    case 'f': {
-      if (sscanf(optarg, "%f:%f:%f:%f", &x0, &y0, &x1, &y1) != 4) {
-        fprintf(stderr, "Couldn't extract field from '%s'\n", optarg);
-        exit(1);
-      }
-      break;
-    }
-    case 'c': {
-      code_config = atoi(optarg);
-      if (code_config < 0 || code_config > 2) {
-        fprintf(stderr, "Invalid code configuration %d\n", code_config);
-        return 1;
-      }
-      break;
-    }
-    case 's': {
-      int size = atoi(optarg);
-      height = size;
-      width = size;
-      break;
-    }
-    case '?':
-    default:
-      usage(argv[0]);
-      return 1;
     }
   }
   // end parsing of commandline options
