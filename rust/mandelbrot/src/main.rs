@@ -59,8 +59,8 @@ pub fn do_runs(mandel_config: &MandelConfig, image: &mut [u32]) {
         }
 
         println!(
-            "[mandelbrot-rust serial]: \t[{:?} ms]",
-            serial_time.as_millis()
+            "[mandelbrot-rust serial]: \t[{:?}] ms",
+            serial_time.as_micros() as f64 / 1000 as f64
         );
     }
 
@@ -75,13 +75,13 @@ pub fn do_runs(mandel_config: &MandelConfig, image: &mut [u32]) {
         }
 
         println!(
-            "[mandelbrot-rust pixel]: \t[{:?} ms]",
-            pixel_parallel_time.as_millis()
+            "[mandelbrot-rust pixel]: \t\t[{:?}] ms",
+            pixel_parallel_time.as_micros() as f64 / 1000 as f64
         );
         if mandel_config.code_config == 0 {
             println!(
                 "++++ \t\t({:.2}x speedup from {:?} threads)\n",
-                serial_time.as_millis() as f64 / pixel_parallel_time.as_millis() as f64, mandel_config.num_threads
+                serial_time.as_micros() as f64 / pixel_parallel_time.as_micros() as f64, mandel_config.num_threads
             );
         }
 
@@ -97,14 +97,14 @@ pub fn do_runs(mandel_config: &MandelConfig, image: &mut [u32]) {
         }
 
         println!(
-            "[mandelbrot-rust row]: \t[{:?} ms]",
-            row_parallel_time.as_millis()
+            "[mandelbrot-rust row]: \t\t\t[{:?}] ms",
+            row_parallel_time.as_micros() as f64 / 1000 as f64
         );
 
         if mandel_config.code_config == 0 {
             println!(
                 "++++ \t\t({:.2}x speedup from {:?} threads) \n",
-                serial_time.as_millis() as f64/ row_parallel_time.as_millis() as f64, mandel_config.num_threads
+                serial_time.as_micros() as f64/ row_parallel_time.as_micros() as f64, mandel_config.num_threads
             );
         }
 
@@ -117,14 +117,14 @@ pub fn do_runs(mandel_config: &MandelConfig, image: &mut [u32]) {
         }
 
         println!(
-            "[mandelbrot-rust crossbeam row]: \t[{:?} ms]",
-            crossbeam_parallel_time.as_millis()
+            "[mandelbrot-rust crossbeam row]: \t[{:?}] ms",
+            crossbeam_parallel_time.as_micros() as f64 / 1000 as f64
         );
 
         if mandel_config.code_config == 0 {
             println!(
                 "++++ \t\t({:.2}x speedup from {:?} threads)\n",
-                serial_time.as_millis() as f64/ crossbeam_parallel_time.as_millis() as f64, mandel_config.num_threads
+                serial_time.as_micros() as f64/ crossbeam_parallel_time.as_micros() as f64, mandel_config.num_threads
             );
         }
     }
