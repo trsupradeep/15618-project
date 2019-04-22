@@ -1,0 +1,4 @@
+Running Parallel over pixels
+[mandelbrot thread - over pixels]:		[6641.132] ms
+Running Parallel over rows
+[mandelbrot thread - over rows]:		[6638.714] ms

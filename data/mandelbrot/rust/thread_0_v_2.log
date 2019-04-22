@@ -1,0 +1,4 @@
+Configuration: 
+re1: -1.013, re2: -0.962, img1: 0.278, img2: 0.323, max_iter: 2048, img_size: 4096, num_threads: 16, num_of_runs: 3, view: 2, code_config: 2 
+
+[mandelbrot-rust serial]: 	[5788.222] ms

@@ -1,0 +1,6 @@
+Configuration: 
+re1: 0.307, re2: 0.373, img1: 0.020, img2: 0.080, max_iter: 2048, img_size: 4096, num_threads: 2, num_of_runs: 3, view: 3, code_config: 1 
+
+[mandelbrot-rust pixel]: 		[14550.319] ms
+[mandelbrot-rust row]: 			[22001.668] ms
+[mandelbrot-rust crossbeam row]: 	[3472.298] ms
