@@ -10,7 +10,7 @@ mkdir ${save_path}
 mandel_c="mandelbrot-c++"
 
 # Make sure executable is present in the given path
-c_exec_path="./../c++/bin"
+c_exec_path="./../C++/bin"
 
 # Run Serial first
 serial_cc="-c 1"
