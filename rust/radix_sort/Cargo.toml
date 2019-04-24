@@ -1,0 +1,7 @@
+[package]
+name = "radix_sort"
+version = "0.1.0"
+authors = ["Supradeep T R <tr.supradeep@gmail.com>"]
+edition = "2018"
+
+[dependencies]
