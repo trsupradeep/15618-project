@@ -5,3 +5,8 @@ authors = ["Supradeep T R <tr.supradeep@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+rayon = "1.0.3"
+clap = "2.33.0"
+num_cpus = "1.10.0"
+crossbeam = "0.7.1"
+rand = "0.6.5"
