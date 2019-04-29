@@ -1,0 +1,3 @@
+Configuration: 
+size=1024 num_threads: 16, num_of_runs: 3
+[matmul-rust serial]: 	[2035.808] ms

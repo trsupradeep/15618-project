@@ -1,0 +1,3 @@
+Configuration: 
+size=1024 num_threads: 4, num_of_runs: 3
+[matmul-rust par_row]: 	[537.808] ms

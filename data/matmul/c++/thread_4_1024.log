@@ -1,0 +1,4 @@
+Running Parallel over Row
+[matmul-c++ par_row]:		[535.434] ms
+Running Parallel over outer loop
+[matmul-c++ par_outer]:		[532.353] ms
