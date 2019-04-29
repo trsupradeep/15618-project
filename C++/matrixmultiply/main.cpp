@@ -125,9 +125,7 @@ void matmul_par_row_outer(int size, int *A, int *B, int *C, int numThreads) {
 static void random_init(int *A, int size) {
   for (int row = 0; row < size; row++) {
     for (int col = 0; col < size; col++) {
-      int rval = rand();
-      int sign = (rval % 2) ? 1 : -1;
-      A[RM(row, col, size)] = sign * (rval % MAX_RANGE);
+      A[RM(row, col, size)] = 1;
     }
   }
 }
