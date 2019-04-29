@@ -199,21 +199,8 @@ pub fn parse_arguments() -> MatMulConfig {
 }
 
 pub fn matmul_serial(size: usize, m_a: &[i32], m_b: &[i32], m_c: &mut [i32]) {
-    // let iter_c = m_c.chunks_mut(size);
-
-    // iter_c.enumerate().for_each(|(c_idx, c_slice)| {
-    //     let a_slice = &m_a[RM!(c_idx, 0, size)..RM!(c_idx + 1, 0, size)];
-    //     c_slice.iter_mut().enumerate().for_each(|(col, c)| {
-    //         *c = a_slice
-    //             .iter()
-    //             .enumerate()
-    //             .map(|(index, addr)| *addr * m_b[RM!(index, col as usize, size)])
-    //             .sum()
-    //     });
-    // });
-
-    let iter_c = m_c.par_chunks_mut(size);
-    let iter_a = m_a.par_chunks(size);
+    let iter_c = m_c.chunks_mut(size);
+    let iter_a = m_a.chunks(size);
 
     iter_c
         .zip(iter_a)
