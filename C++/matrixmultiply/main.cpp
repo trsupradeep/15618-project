@@ -75,6 +75,20 @@ void matmul_serial(int size, int *A, int *B, int *C) {
   }
 }
 
+// Serial version of Matrix multiplication
+void matmul_serial2(int size, int *A, int *B, int *C) {
+  for (int i = 0; i < size; i++) {
+    int iOff = i * size;
+    for (int j = 0; j < size; j++) {
+      int c = 0;
+      for (int k = 0; k < size; k++) {
+        c += A[iOff + k] * B[RM(k, i, size)];
+      }
+      C[RM(i, j, size)] = c;
+    }
+  }
+}
+
 // Parallel version of Matrix multiplication for row
 void matmul_par_row(int size, int *A, int *B, int *C, int numThreads) {
   omp_set_num_threads(numThreads);
