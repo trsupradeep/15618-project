@@ -65,8 +65,8 @@ pub fn do_runs(matmul_config: &MatMulConfig, m_a: &mut [i32], m_b: &mut [i32]) {
     if (matmul_config.code_config == 0) || (matmul_config.code_config == 2) {
         for _ in 0..num_runs {
             let serial_start = Instant::now();
-            // matmul_serial(matmul_config.size as usize, m_a, m_b, &mut serial_m_c[..]);
-            matmul_seq(m_a, m_b, &mut serial_m_c[..]);
+            matmul_serial(matmul_config.size as usize, m_a, m_b, &mut serial_m_c[..]);
+            // matmul_seq(m_a, m_b, &mut serial_m_c[..]);
             let serial_end = Instant::now();
 
             serial_time = std::cmp::min(serial_time, serial_end.duration_since(serial_start));
@@ -199,33 +199,52 @@ pub fn parse_arguments() -> MatMulConfig {
 }
 
 pub fn matmul_serial(size: usize, m_a: &[i32], m_b: &[i32], m_c: &mut [i32]) {
-    let iter_c = m_c.chunks_mut(size);
+    // let iter_c = m_c.chunks_mut(size);
 
-    iter_c.enumerate().for_each(|(c_idx, c_slice)| {
-        let a_slice = &m_a[RM!(c_idx, 0, size)..RM!(c_idx + 1, 0, size)];
-        c_slice.iter_mut().enumerate().for_each(|(col, c)| {
-            *c = a_slice
-                .iter()
-                .enumerate()
-                .map(|(index, addr)| *addr * m_b[RM!(index, col as usize, size)])
-                .sum()
+    // iter_c.enumerate().for_each(|(c_idx, c_slice)| {
+    //     let a_slice = &m_a[RM!(c_idx, 0, size)..RM!(c_idx + 1, 0, size)];
+    //     c_slice.iter_mut().enumerate().for_each(|(col, c)| {
+    //         *c = a_slice
+    //             .iter()
+    //             .enumerate()
+    //             .map(|(index, addr)| *addr * m_b[RM!(index, col as usize, size)])
+    //             .sum()
+    //     });
+    // });
+
+    let iter_c = m_c.par_chunks_mut(size);
+    let iter_a = m_a.par_chunks(size);
+
+    iter_c
+        .zip(iter_a)
+        .enumerate()
+        .for_each(|(_, (c_slice, a_slice))| {
+            c_slice.iter_mut().enumerate().for_each(|(col, c)| {
+                *c = a_slice
+                    .iter()
+                    .enumerate()
+                    .map(|(index, addr)| *addr * m_b[RM!(index, col as usize, size)])
+                    .sum()
+            });
         });
-    });
 }
 
 pub fn matmul_par_row(size: usize, m_a: &[i32], m_b: &[i32], m_c: &mut [i32]) {
     let iter_c = m_c.par_chunks_mut(size);
+    let iter_a = m_a.par_chunks(size);
 
-    iter_c.enumerate().for_each(|(c_idx, c_slice)| {
-        let a_slice = &m_a[RM!(c_idx, 0, size)..RM!(c_idx + 1, 0, size)];
-        c_slice.iter_mut().enumerate().for_each(|(col, c)| {
-            *c = a_slice
-                .iter()
-                .enumerate()
-                .map(|(index, addr)| *addr * m_b[RM!(index, col as usize, size)])
-                .sum()
+    iter_c
+        .zip(iter_a)
+        .enumerate()
+        .for_each(|(_, (c_slice, a_slice))| {
+            c_slice.iter_mut().enumerate().for_each(|(col, c)| {
+                *c = a_slice
+                    .iter()
+                    .enumerate()
+                    .map(|(index, addr)| *addr * m_b[RM!(index, col as usize, size)])
+                    .sum()
+            });
         });
-    });
 }
 
 pub fn matmul_seq(m_a: &[i32], m_b: &[i32], dest: &mut [i32]) {
