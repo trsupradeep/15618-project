@@ -155,7 +155,7 @@ void do_runs(int size, int zorder, int numThreads, int code_config,
       memset(C_serial, 0, size * size * sizeof(int));
 
       double startTime = CycleTimer::currentSeconds();
-      matmul_serial(size, A, B, C_serial);
+      matmul_serial2(size, A, B, C_serial);
       double endTime = CycleTimer::currentSeconds();
       minSerial = std::min(minSerial, endTime - startTime);
     }
