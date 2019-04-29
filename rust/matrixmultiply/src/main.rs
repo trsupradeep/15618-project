@@ -25,13 +25,9 @@ fn main() {
 
     let num_mat_elements = matmul_config.size * matmul_config.size;
 
-    let mut m_a: Vec<i32> = (0..num_mat_elements)
-        .map(|_| rng.gen_range(-10, 10))
-        .collect();
+    let mut m_a: Vec<i32> = vec![1; num_mat_elements as usize];
 
-    let mut m_b: Vec<i32> = (0..num_mat_elements)
-        .map(|_| rng.gen_range(-10, 10))
-        .collect();
+    let mut m_b: Vec<i32> = vec![1; num_mat_elements as usize];
 
     // Set the number of threads for rayon
     rayon::ThreadPoolBuilder::new()
