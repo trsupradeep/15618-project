@@ -298,16 +298,15 @@ pub fn scale_and_shift(
  *************************************/
 // The serial version of the mandelbrot set calculation.
 pub fn mandelbrot_serial(mandel_config: &MandelConfig, image: &mut [u32]) {
-    for y in 0..mandel_config.img_size {
-        for x in 0..mandel_config.img_size {
-            let xf = mandel_config.re1 + x as f32 * mandel_config.x_step;
-            let yf = mandel_config.img1 + y as f32 * mandel_config.y_step;
+    image.iter_mut().enumerate().for_each(|(n, pixel)| {
+        let y = (n as u32) / mandel_config.img_size;
+        let x = (n as u32) - (y * mandel_config.img_size);
 
-            let index = ((y * mandel_config.img_size) + x) as usize;
+        let xf = mandel_config.re1 + x as f32 * mandel_config.x_step;
+        let yf = mandel_config.img1 + y as f32 * mandel_config.y_step;
 
-            image[index] = mandel_iter(mandel_config.max_iter, xf, yf);
-        }
-    }
+        *pixel = mandel_iter(mandel_config.max_iter, xf, yf);
+    });
 }
 
 // Parallel version with Rayon using Pixel wise parallelism
