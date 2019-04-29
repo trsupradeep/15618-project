@@ -4,13 +4,13 @@
 mkdir ./../data
 mkdir ./../data/mandelbrot
 
-save_path="./../data/mandelbrot/rust"
+save_path="./../../data/mandelbrot/rust"
 mkdir ${save_path}
 
 mandel_rust="mandelbrot-rust"
 
 # Make sure executable is present in the given path
-rust_exec_path="./../rust/bin"
+rust_exec_path="./../../rust/bin"
 
 # Run Serial first
 serial_cc="-c 2"

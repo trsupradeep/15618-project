@@ -4,13 +4,13 @@
 mkdir ./../data
 mkdir ./../data/mandelbrot
 
-save_path="./../data/mandelbrot/c++"
+save_path="./../../data/mandelbrot/c++"
 mkdir ${save_path}
 
 mandel_c="mandelbrot-c++"
 
 # Make sure executable is present in the given path
-c_exec_path="./../C++/bin"
+c_exec_path="./../../C++/bin"
 
 # Run Serial first
 serial_cc="-c 1"
