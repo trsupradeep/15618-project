@@ -2,24 +2,16 @@
 extern crate clap;
 extern crate num_cpus;
 extern crate rayon;
+extern crate rand;
 
 use clap::{App, Arg};
 use rayon::prelude::*;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use std::time::{Duration, Instant};
+use rand::{Rng, thread_rng};
+use rand::distributions::{Uniform};
 
 fn main() {
-    let (qs_config, input_path) = parse_arguments();
-
-    let f = BufReader::new(File::open(input_path).unwrap());
-
-    let all_lines: Vec<String> = f
-        .lines()
-        .map(|l| l.expect("Could not parse line"))
-        .collect();
-
-    let mut inp_num_vec: Vec<u32> = all_lines.iter().map(|s| s.parse().unwrap()).collect();
+    let qs_config = parse_arguments();
 
     // Set the number of threads for rayon
     rayon::ThreadPoolBuilder::new()
@@ -27,7 +19,7 @@ fn main() {
         .build_global()
         .unwrap();
 
-    do_runs(&qs_config, &mut inp_num_vec.as_mut_slice());
+    do_runs(&qs_config);
 }
 
 // Configuration file, reflects command line options
@@ -40,7 +32,7 @@ pub struct QSConfig {
     pub code_config: u32,
 }
 
-pub fn parse_arguments() -> (QSConfig, String) {
+pub fn parse_arguments() -> QSConfig {
     // Create arugment matches
     let matches = App::new("Quick_Sort")
         .version("1.0")
@@ -51,7 +43,7 @@ pub fn parse_arguments() -> (QSConfig, String) {
                 .short("n")
                 .long("num_vals")
                 .value_name("NUM_ELEMENTS")
-                .help("number of elements in the array to sort (default: 2000))"),
+                .help("number of elements in the array to sort (default: 1M))"),
         )
         .arg(
             Arg::with_name("SORT_ORDER")
@@ -81,26 +73,18 @@ pub fn parse_arguments() -> (QSConfig, String) {
                 .value_name("CODE")
                 .help("Enter 0 for all code, 1 for parallel only, 2 for serial only (default: 0)"),
         )
-        .arg(
-            Arg::with_name("FILE_PATH")
-                .short("i")
-                .long("input")
-                .value_name("FILE_PATH")
-                .help("enter input file path here (default: ./10000.txt)"),
-        )
         .get_matches();
 
     // Find number of cpus available
     let max_threads = num_cpus::get();
 
     // Match and store all values of the arguments
-    let num_elements = value_t!(matches.value_of("IMAGE_SIZE"), u32).unwrap_or(10000);
+    let num_elements = value_t!(matches.value_of("NUM_ELEMENTS"), u32).unwrap_or(1000000);
     let sort_order = value_t!(matches.value_of("SORT_ORDER"), u32).unwrap_or(0);
     let num_of_runs = value_t!(matches.value_of("NUM_OF_RUNS"), u32).unwrap_or(3);
     let num_threads =
         value_t!(matches.value_of("NUMBER_OF_THREADS"), u32).unwrap_or(max_threads as u32);
     let code_config = value_t!(matches.value_of("CODE"), u32).unwrap_or(0);
-    let file_path = matches.value_of("FILE_PATH").unwrap_or("./10000.txt");
 
     // Check if values are correct for the mandelbrot program
     assert!(num_elements > 0);
@@ -108,26 +92,22 @@ pub fn parse_arguments() -> (QSConfig, String) {
     assert!(num_threads > 0);
     assert!(num_of_runs > 0);
     assert!(code_config < 3);
-    assert_eq!(file_path.is_empty(), false);
 
     //
-    println!("Configuration: \nnum_elements: {}, sort_order: {}, num_threads: {}, num_of_runs: {}, code_config: {}, input_path: {:?} \n",
-        num_elements, sort_order, num_threads, num_of_runs, code_config, file_path);
+    println!("Configuration: \nnum_elements: {}, sort_order: {}, num_threads: {}, num_of_runs: {}, code_config: {}\n",
+        num_elements, sort_order, num_threads, num_of_runs, code_config);
 
     // Return the struct that can be used by the functions
-    (
-        QSConfig {
-            num_elements: num_elements,
-            sort_order: sort_order,
-            num_threads: num_threads,
-            num_of_runs: num_of_runs,
-            code_config: code_config,
-        },
-        file_path.to_string(),
-    )
+    QSConfig {
+        num_elements: num_elements,
+        sort_order: sort_order,
+        num_threads: num_threads,
+        num_of_runs: num_of_runs,
+        code_config: code_config,
+    }
 }
 
-pub fn do_runs(qs_config: &QSConfig, num_vec: &mut [u32]) {
+pub fn do_runs(qs_config: &QSConfig) {
     let num_runs = qs_config.num_of_runs;
     assert!(num_runs > 0);
 
@@ -136,19 +116,22 @@ pub fn do_runs(qs_config: &QSConfig, num_vec: &mut [u32]) {
     let mut stable_par_time = Duration::new(10000, 0);
     let mut unstable_par_time = Duration::new(10000, 0);
 
+    let range = Uniform::new(std::u64::MIN, std::u64::MAX);
+
     if (qs_config.code_config == 0) || (qs_config.code_config == 2) {
         // Stable serial sort
         for _ in 0..num_runs {
+            let mut v: Vec<u64> = thread_rng().sample_iter(&range).take(qs_config.num_elements as usize).collect();
             let serial_start = Instant::now();
-            stable_sort_serial(&qs_config, num_vec);
+            stable_sort_serial(&qs_config, &mut v[..]);
             let serial_end = Instant::now();
 
             stable_serial_time =
                 std::cmp::min(stable_serial_time, serial_end.duration_since(serial_start));
+            // assert!(is_sorted(&mut v[..], qs_config.sort_order));
         }
 
         // Check correctness
-        assert!(is_sorted(&mut num_vec[..], qs_config.sort_order));
 
         println!(
             "[sort-stable-rust serial]: \t[{:?}] ms",
@@ -157,8 +140,9 @@ pub fn do_runs(qs_config: &QSConfig, num_vec: &mut [u32]) {
 
         // Unstable serial sort
         for _ in 0..num_runs {
+            let mut v: Vec<u64> = thread_rng().sample_iter(&range).take(qs_config.num_elements as usize).collect();
             let serial_start = Instant::now();
-            unstable_sort_serial(&qs_config, num_vec);
+            unstable_sort_serial(&qs_config, &mut v[..]);
             let serial_end = Instant::now();
 
             unstable_serial_time = std::cmp::min(
@@ -168,7 +152,7 @@ pub fn do_runs(qs_config: &QSConfig, num_vec: &mut [u32]) {
         }
 
         // Check correctness
-        assert!(is_sorted(&mut num_vec[..], qs_config.sort_order));
+        // assert!(is_sorted(&mut v[..], qs_config.sort_order));
 
         println!(
             "[sort-unstable-rust serial]: \t[{:?}] ms",
@@ -179,8 +163,9 @@ pub fn do_runs(qs_config: &QSConfig, num_vec: &mut [u32]) {
     if (qs_config.code_config == 0) || (qs_config.code_config == 1) {
         // Stable parallel sort
         for _ in 0..num_runs {
+            let mut v: Vec<u64> = thread_rng().sample_iter(&range).take(qs_config.num_elements as usize).collect();
             let stable_par_start = Instant::now();
-            stable_sort_par(&qs_config, num_vec);
+            stable_sort_par(&qs_config, &mut v[..]);
             let stable_par_end = Instant::now();
 
             stable_par_time = std::cmp::min(
@@ -190,7 +175,7 @@ pub fn do_runs(qs_config: &QSConfig, num_vec: &mut [u32]) {
         }
 
         println!(
-            "[sort-rust stable]: \t\t[{:?}] ms",
+            "[sort-stable par]: \t\t[{:?}] ms",
             stable_par_time.as_micros() as f64 / 1000 as f64
         );
         if qs_config.code_config == 0 {
@@ -203,8 +188,9 @@ pub fn do_runs(qs_config: &QSConfig, num_vec: &mut [u32]) {
 
         // Unstable parallel sort
         for _ in 0..num_runs {
+            let mut v: Vec<u64> = thread_rng().sample_iter(&range).take(qs_config.num_elements as usize).collect();
             let stable_par_start = Instant::now();
-            stable_sort_par(&qs_config, num_vec);
+            stable_sort_par(&qs_config, &mut v[..]);
             let stable_par_end = Instant::now();
 
             unstable_par_time = std::cmp::min(
@@ -214,7 +200,7 @@ pub fn do_runs(qs_config: &QSConfig, num_vec: &mut [u32]) {
         }
 
         println!(
-            "[sort-rust stable]: \t\t[{:?}] ms",
+            "[sort-unstable par]: \t\t[{:?}] ms",
             unstable_par_time.as_micros() as f64 / 1000 as f64
         );
         if qs_config.code_config == 0 {
@@ -231,7 +217,7 @@ pub fn do_runs(qs_config: &QSConfig, num_vec: &mut [u32]) {
  * Sort functions
  *************************************/
 // The serial version of the sorting
-pub fn stable_sort_serial(qs_config: &QSConfig, num_vec: &mut [u32]) {
+pub fn stable_sort_serial(qs_config: &QSConfig, num_vec: &mut [u64]) {
     if qs_config.sort_order == 0 {
         num_vec.sort();
     } else {
@@ -239,7 +225,7 @@ pub fn stable_sort_serial(qs_config: &QSConfig, num_vec: &mut [u32]) {
     }
 }
 
-pub fn unstable_sort_serial(qs_config: &QSConfig, num_vec: &mut [u32]) {
+pub fn unstable_sort_serial(qs_config: &QSConfig, num_vec: &mut [u64]) {
     if qs_config.sort_order == 0 {
         num_vec.sort_unstable();
     } else {
@@ -248,7 +234,7 @@ pub fn unstable_sort_serial(qs_config: &QSConfig, num_vec: &mut [u32]) {
 }
 
 // The serial version of the mandelbrot set calculation.
-pub fn stable_sort_par(qs_config: &QSConfig, num_vec: &mut [u32]) {
+pub fn stable_sort_par(qs_config: &QSConfig, num_vec: &mut [u64]) {
     if qs_config.sort_order == 0 {
         num_vec.par_sort();
     } else {
