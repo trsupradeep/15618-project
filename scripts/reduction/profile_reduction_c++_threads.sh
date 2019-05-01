@@ -28,8 +28,8 @@ do
   for re in 0 1
   do
     flag="-n ${size[${s}]} -r 3 ${reduc[re]}"
-    echo "${c_exec_path}/${exec_c} ${flag} ${cc} > ${save_path}/thread_0_${size[${s}]}.log"
-    ${c_exec_path}/${exec_c} ${flag} ${serial_cc} > ${save_path}/thread_0_${size[${s}]}.log
+    echo "${c_exec_path}/${exec_c} ${flag} ${cc} > ${save_path}/thread_0_${size[${s}]}_${re}.log"
+    ${c_exec_path}/${exec_c} ${flag} ${serial_cc} > ${save_path}/thread_0_${size[${s}]}_${re}.log
   done
 done
 
@@ -49,8 +49,8 @@ do
     for re in 0 1
     do
       flag="-n ${size[${s}]} -r 3 -t ${t} ${reduc[re]}"
-      echo "${c_exec_path}/${exec_c} ${flag} ${cc} > ${save_path}/thread_${t}_${size[${s}]}.log"
-      ${c_exec_path}/${exec_c} ${flag} ${cc} > ${save_path}/thread_${t}_${size[${s}]}.log
+      echo "${c_exec_path}/${exec_c} ${flag} ${cc} > ${save_path}/thread_${t}_${size[${s}]}_${re}.log"
+      ${c_exec_path}/${exec_c} ${flag} ${cc} > ${save_path}/thread_${t}_${size[${s}]}_${re}.log
     done
   done
 
