@@ -118,10 +118,11 @@ pub fn do_runs(qs_config: &QSConfig) {
 
     let range = Uniform::new(std::u64::MIN, std::u64::MAX);
 
+    let v_orig: Vec<u64> = thread_rng().sample_iter(&range).take(qs_config.num_elements as usize).collect();
     if (qs_config.code_config == 0) || (qs_config.code_config == 2) {
         // Stable serial sort
         for _ in 0..num_runs {
-            let mut v: Vec<u64> = thread_rng().sample_iter(&range).take(qs_config.num_elements as usize).collect();
+            let mut v = v_orig.clone();
             let serial_start = Instant::now();
             stable_sort_serial(&qs_config, &mut v[..]);
             let serial_end = Instant::now();
@@ -140,7 +141,7 @@ pub fn do_runs(qs_config: &QSConfig) {
 
         // Unstable serial sort
         for _ in 0..num_runs {
-            let mut v: Vec<u64> = thread_rng().sample_iter(&range).take(qs_config.num_elements as usize).collect();
+            let mut v = v_orig.clone();
             let serial_start = Instant::now();
             unstable_sort_serial(&qs_config, &mut v[..]);
             let serial_end = Instant::now();
@@ -163,7 +164,7 @@ pub fn do_runs(qs_config: &QSConfig) {
     if (qs_config.code_config == 0) || (qs_config.code_config == 1) {
         // Stable parallel sort
         for _ in 0..num_runs {
-            let mut v: Vec<u64> = thread_rng().sample_iter(&range).take(qs_config.num_elements as usize).collect();
+            let mut v = v_orig.clone();
             let stable_par_start = Instant::now();
             stable_sort_par(&qs_config, &mut v[..]);
             let stable_par_end = Instant::now();
@@ -188,7 +189,7 @@ pub fn do_runs(qs_config: &QSConfig) {
 
         // Unstable parallel sort
         for _ in 0..num_runs {
-            let mut v: Vec<u64> = thread_rng().sample_iter(&range).take(qs_config.num_elements as usize).collect();
+            let mut v = v_orig.clone();
             let stable_par_start = Instant::now();
             stable_sort_par(&qs_config, &mut v[..]);
             let stable_par_end = Instant::now();
