@@ -122,7 +122,7 @@ pub fn do_runs(reduce_config: &ReduceConfig) {
 
     println!("Generated Random numbers");
 
-    if (reduce_config.code_config == 0) || (reduce_config.code_config == 2) {
+    if (reduce_config.code_config == 0) || (reduce_config.code_config == 1) {
         // Serial reduction
         for _ in 0..num_runs {
             let mut v = v_orig.clone();
@@ -147,7 +147,7 @@ pub fn do_runs(reduce_config: &ReduceConfig) {
         );
     }
 
-    if (reduce_config.code_config == 0) || (reduce_config.code_config == 1) {
+    if (reduce_config.code_config == 0) || (reduce_config.code_config == 2) {
         // Parallel Reduce
         for _ in 0..num_runs {
             let mut v = v_orig.clone();
