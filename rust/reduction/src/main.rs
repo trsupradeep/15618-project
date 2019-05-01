@@ -113,7 +113,7 @@ pub fn do_runs(reduce_config: &ReduceConfig) {
     let mut serial_reduction_time = Duration::new(10000, 0);
     let mut reduce_par_time = Duration::new(10000, 0);
 
-    let range = Uniform::new(std::f64::MIN, std::f64::MAX);
+    let range = Uniform::new(0.0, std::f64::MAX);
 
     let v_orig: Vec<f64> = thread_rng()
         .sample_iter(&range)
