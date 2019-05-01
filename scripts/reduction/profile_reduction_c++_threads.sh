@@ -16,16 +16,18 @@ c_exec_path="./../../C++/bin"
 # Run Serial first
 cc="-c 1"
 
-size=(1000000 10000000 100000000 500000000)
+size=(100000000 500000000 1000000000 2000000000)
+
+reduc=("-p 0" "-p 1")
 
 echo "--------------------------------------------------------------------------"
 echo " Performing serial runs"
 echo "--------------------------------------------------------------------------"
 for s in 0 1 2 3 
 do
-  for reduc in "-p 0" "-p 1"
+  for re in 0 1
   do
-    flag="-n ${size[${s}]} -r 3 ${reduc}"
+    flag="-n ${size[${s}]} -r 3 ${reduc[re]}"
     echo "${c_exec_path}/${exec_c} ${flag} ${cc} > ${save_path}/thread_0_${size[${s}]}.log"
     ${c_exec_path}/${exec_c} ${flag} ${serial_cc} > ${save_path}/thread_0_${size[${s}]}.log
   done
@@ -44,9 +46,9 @@ do
 
   for s in 0 1 2 3
   do
-    for reduc in "-p 0" "-p 1"
+    for re in 0 1
     do
-      flag="-n ${size[${s}]} -r 3 -t ${t} ${reduc}"
+      flag="-n ${size[${s}]} -r 3 -t ${t} ${reduc[re]}"
       echo "${c_exec_path}/${exec_c} ${flag} ${cc} > ${save_path}/thread_${t}_${size[${s}]}.log"
       ${c_exec_path}/${exec_c} ${flag} ${cc} > ${save_path}/thread_${t}_${size[${s}]}.log
     done

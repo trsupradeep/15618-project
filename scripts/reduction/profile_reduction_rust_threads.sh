@@ -16,16 +16,16 @@ exec_path="./../../rust/bin"
 # Run Serial first
 cc="-c 1"
 
-size=(1000000 10000000 100000000 500000000)
+size=(100000000 500000000 1000000000 2000000000)
 
 echo "--------------------------------------------------------------------------"
 echo " Performing serial runs"
 echo "--------------------------------------------------------------------------"
 for s in 0 1 2 3
 do
-  for reduc in "-p 0" "-p 1"
+  for reduc in 0 1
   do
-    flag="-s ${size[${s}]} -r 3 ${reduc}"
+    flag="-s ${size[${s}]} -r 3 ${reduc[re]}"
     echo "${exec_path}/${exec} ${flag} ${cc} > ${save_path}/thread_0_${size[${s}]}.log"
     ${exec_path}/${exec} ${flag} ${cc} > ${save_path}/thread_0_${size[${s}]}.log
   done
@@ -44,9 +44,9 @@ do
 
   for s in 0 1 2 3
   do
-    for reduc in "-p 0" "-p 1"
+    for reduc in 0 1
     do
-      flag="-n ${size[${s}]} -r 3 -t ${t} ${reduc}"
+      flag="-n ${size[${s}]} -r 3 -t ${t} ${reduc[re]]}"
       echo "${exec_path}/${exec} ${flag} ${cc} > ${save_path}/thread_${t}_${size[${s}]}.log"
       ${exec_path}/${exec} ${flag} ${cc} > ${save_path}/thread_${t}_${size[${s}]}.log
     done
