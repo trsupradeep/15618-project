@@ -2,9 +2,9 @@
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <algorithm>
 #include <cstring>
-#include <time.h>
 
 #include "CycleTimer.h"
 
@@ -45,9 +45,10 @@ double reduction_serial(long int len, double *arr, bool do_square) {
 }
 
 // Parallel reduction
-double reduction_par(long int len, double *arr, bool do_square) {
+double reduction_par(int num_threads, long int len, double *arr,
+                     bool do_square) {
   double sum = 0.0;
-  omp_set_num_threads(4);
+  omp_set_num_threads(num_threads);
   if (do_square) {
 #pragma omp parallel for reduction(+ : sum)
     for (int i = 0; i < len; i++) {
@@ -97,7 +98,8 @@ void do_runs(long int size, int do_square, int numThreads, int code_config,
   if ((code_config == 0) || (code_config == 2)) {
     for (int i = 0; i < numRuns; ++i) {
       double startTime = CycleTimer::currentSeconds();
-      printf("Sum:%lf \n", reduction_par(size, arr_parallel, do_square));
+      printf("Sum:%lf \n",
+             reduction_par(numThreads, size, arr_parallel, do_square));
       double endTime = CycleTimer::currentSeconds();
       minThread = std::min(minThread, endTime - startTime);
     }
