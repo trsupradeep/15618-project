@@ -84,4 +84,31 @@ The reason we added this as a part of our design to test is because we faced thi
 
 During Matrix Multiplication, we were able to write multiple variations of the code, which allowed for a different style of parallelization. Only through speed-up graphs, we were able to analyze the difference in speed. Also, to eliminate the effect of cache miss, only for testing this speed we used smaller matrices. 
 
+### Results
+
+The results or insights we provide in each of the benchmarks will follow the given order for understanding and extending the thought process:
+1.	Tests: We provide the test configurations for the benchmarking.
+2.	Insights:
+
+    *	Serial Comparison – Comparison for the serial code timings of both Rust and C++.
+
+    * 	Speed up - A comparison of the speeds between the libraries, and how they scale according to threads.
+
+    *	Time difference – This will provide as to how efficiently are mapping to cores done, and what is the actual timing difference between the parallelism constructs. 
+
+    *	Problems Encountered - A description of problems that were faced in creating the benchmarks or generating the data.
+
+3.	Deeper insights (depending on what is needed):
+
+    *	Performance analysis using perf - To see how the program behaves with the caches and the cores, perf gives us insight that helps us understand the behavior seen above. 
+
+    *	Source code analysis - By looking at the source code in the repository, we can explain most of the behavior by looking art overhead that is created due to the boilerplate code that is added by the parallelism construct. 
+
+In each of the benchmarks, we will first show the difference through benchmarked timings, giving an explanation for the behavior. As mentioned, we will provide a few graphs to identify and create insights. Using those insights, we will delve deeper and using source code analysis and other tools, we will attempt to explain why that behavior occurred. 
+
+We believe that a structured way of understanding and showing information, helps the reader not only grasp the information quickly, but also see how we did our experiments to suggest improvements and follow the methodology to perform their own experiments. 
+
+We used a best of three runs for reach benchmark, while building executables with command line options to run difference configurations seamlessly. We used shell scripts to generate the data. The generated data was consumed and formatted using Python script.
+
+
 
