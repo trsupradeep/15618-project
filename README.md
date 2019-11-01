@@ -1,5 +1,11 @@
 # Comparison of Multi-threading between C++ and Rust (OpenMP vs Rayon)
 
+## Table of contents
+* [Summary](#summary)
+* [Motivation](#motivation)
+* [Background](#background)
+* [Approach](#approach)
+
 ## Summary
 We implemented and compared four benchmarks in Rust and C++ using Rayon and OpenMP respectively. To provide in-depth comparison, we have used multiple configurations for each benchmark. Rayon performed as good as OpenMP in cases where the underlying algorithm or compiler gave an advantage or edge. The downfalls of Rayon are the under-optimized computing function, cost of creating splits of work, and stealing when compared to a possible static scheduling. Rayon performed better for sorting and multiplication of larger matrices. In all other benchmarks, OpenMP had the upper hand. Another advantage Rayon possessed was the failure in compilation of code that had unsafe sharing of variables between threads, allowing us to write correct code always. 
 
